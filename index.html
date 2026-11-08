@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<title>Radar de Passagens</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Promoções de passagens dos principais blogs brasileiros, busca flexível e dicas, num lugar só.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Public+Sans:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: sinalização de aeroporto. Faixa amarela de embarque no topo, painel de busca à esquerda e resultados à direita, depois seções em coluna única. */
+:root{
+  --bg:#F2F4F6; --panel:#FFFFFF; --ink:#11161D; --muted:#5A6573; --line:#D9DEE4;
+  --sign:#F5C400; --sign-ink:#11161D; --link:#1D58B8; --ok:#1E7A46; --warn:#A85A00;
+  --display:"Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --body:"Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1218; --panel:#161E28; --ink:#E7ECF1; --muted:#97A3B1; --line:#2A3542;
+  --sign:#F5C400; --sign-ink:#11161D; --link:#7FB0FF; --ok:#5BC98A; --warn:#F0A54A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1218; --panel:#161E28; --ink:#E7ECF1; --muted:#97A3B1; --line:#2A3542;
+  --sign:#F5C400; --sign-ink:#11161D; --link:#7FB0FF; --ok:#5BC98A; --warn:#F0A54A; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:0}
+a{color:var(--link)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--link);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.05;margin:0}
+.code{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+header.board{background:var(--sign);color:var(--sign-ink)}
+header.board .wrap{padding-block:28px 22px;display:flex;flex-wrap:wrap;gap:12px 32px;align-items:end;justify-content:space-between}
+header.board h1{font-size:clamp(44px,8vw,84px);font-weight:800;text-transform:uppercase;letter-spacing:.01em}
+header.board p{margin:6px 0 0;max-width:52ch;font-weight:600}
+.flap{display:flex;gap:4px}
+.flap span{font-family:var(--mono);font-weight:700;background:var(--sign-ink);color:var(--sign);padding:6px 8px;border-radius:3px;font-size:20px}
+
+nav.tabs{border-bottom:1px solid var(--line);background:var(--panel)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto}
+nav.tabs a{font-family:var(--display);font-weight:600;font-size:20px;text-transform:uppercase;letter-spacing:.04em;text-decoration:none;color:var(--muted);padding:12px 14px;border-bottom:4px solid transparent;white-space:nowrap}
+nav.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--sign)}
+
+main .wrap{padding-block:28px 56px}
+section[data-view]{display:grid;gap:24px}
+.lede{color:var(--muted);max-width:68ch;margin:0}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+.search{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:820px){.search{grid-template-columns:minmax(0,1fr)}}
+form.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:20px;display:grid;gap:14px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{display:grid;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:9px 10px;width:100%;min-width:0}
+input.iata{font-family:var(--mono);font-weight:700;text-transform:uppercase;font-size:18px;letter-spacing:.06em}
+.check{display:flex;gap:8px;align-items:center;font-weight:600;color:var(--ink)}
+.check input{width:auto}
+button{font:inherit;cursor:pointer;border-radius:4px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:9px 14px;font-weight:700}
+button.primary{background:var(--sign);color:var(--sign-ink);border-color:var(--sign);font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spacing:.04em}
+
+.results{display:grid;gap:16px;min-width:0}
+.route{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.route .code{font-size:clamp(34px,6vw,52px);font-weight:700;line-height:1}
+.route .arrow{font-family:var(--display);font-size:32px;color:var(--muted)}
+.links{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.links a{display:grid;gap:2px;text-decoration:none;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.links a:hover{border-color:var(--link)}
+.links a b{font-size:15px}
+.links a small{color:var(--muted);font-size:13px}
+.tips{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.tips li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.pill{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
+.pill.ok{color:var(--ok)} .pill.warn{color:var(--warn)} .pill.info{color:var(--link)}
+
+.sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.src{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;display:grid;gap:10px;align-content:start}
+.src h3{font-size:26px;font-weight:800;text-transform:uppercase}
+.src p{margin:0;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips a,.chips span{font-size:13px;font-weight:600;padding:4px 9px;border-radius:999px;border:1px solid var(--line);text-decoration:none;color:var(--ink);background:var(--bg)}
+.chips a:hover{border-color:var(--link)}
+
+table{border-collapse:collapse;width:100%;min-width:620px}
+.tablebox{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700}
+.watchform{display:grid;grid-template-columns:110px 110px 140px minmax(0,1fr) auto;gap:10px;align-items:end;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px}
+@media (max-width:760px){.watchform{grid-template-columns:1fr 1fr}.watchform .full{grid-column:1/-1}}
+.note{font-size:13px;color:var(--muted)}
+
+.guide{display:grid;gap:14px;max-width:78ch}
+.guide article{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px 18px;display:grid;gap:6px}
+.guide h3{font-size:24px;font-weight:800;text-transform:uppercase}
+.guide p{margin:0}
+.guide .src-line{font-size:13px;color:var(--muted)}
+.feedbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.feedbar button[aria-pressed="true"]{background:var(--sign);color:var(--sign-ink);border-color:var(--sign)}
+.feed{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.feed li{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:grid;gap:4px}
+.feed li.match{border-color:var(--ok);box-shadow:inset 4px 0 0 var(--ok)}
+.feed a.t{font-weight:700;color:var(--ink);text-decoration:none;font-size:16px}
+.feed a.t:hover{color:var(--link);text-decoration:underline}
+.feed .meta{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px;color:var(--muted);align-items:center}
+footer{border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+footer .wrap{padding-block:20px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+
+<header class="board">
+  <div class="wrap">
+    <div>
+      <h1>Radar de Passagens</h1>
+      <p>Busca flexível, os melhores sites de promoção do Brasil e as dicas que eles ensinam, num lugar só.</p>
+    </div>
+    <div class="flap" aria-hidden="true"><span>G</span><span>R</span><span>U</span><span>→</span><span>?</span><span>?</span><span>?</span></div>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="Seções">
+  <div class="wrap">
+    <a href="#hoje" data-tab="hoje">Promoções de hoje</a>
+    <a href="#busca" data-tab="busca">Busca flexível</a>
+    <a href="#promocoes" data-tab="promocoes">Onde saem as promoções</a>
+    <a href="#rotas" data-tab="rotas">Minhas rotas</a>
+    <a href="#dicas" data-tab="dicas">Dicas dos especialistas</a>
+  </div>
+</nav>
+
+<main><div class="wrap">
+
+<!-- HOJE -->
+<section data-view="hoje">
+  <div>
+    <h2 style="font-size:40px;text-transform:uppercase">Promoções de hoje</h2>
+    <p class="lede">As últimas ofertas publicadas pelos sites de promoção, atualizadas a cada 3 horas. Aqui aparecem só o título e o link: clique para ler a oferta e as regras no site original. Ofertas que batem com <a href="#rotas">suas rotas</a> ficam marcadas em verde.</p>
+  </div>
+  <div class="feedbar" id="filtros" role="group" aria-label="Filtrar">
+    <button type="button" data-f="todas" aria-pressed="true">Todas</button>
+    <button type="button" data-f="passagem" aria-pressed="false">Passagens</button>
+    <button type="button" data-f="internacional" aria-pressed="false">Internacionais</button>
+    <button type="button" data-f="milhas" aria-pressed="false">Milhas e bônus</button>
+    <button type="button" data-f="erro" aria-pressed="false">Erro tarifário</button>
+    <button type="button" data-f="rotas" aria-pressed="false">Minhas rotas</button>
+  </div>
+  <p class="note" id="feed-status">Carregando promoções…</p>
+  <ul class="feed" id="feed"></ul>
+</section>
+
+<!-- BUSCA -->
+<section data-view="busca" hidden>
+  <div class="search">
+    <form class="panel" id="f-busca" autocomplete="off">
+      <div class="eyebrow">Monte sua busca</div>
+      <div class="row">
+        <label>Origem (código do aeroporto)<input id="orig" class="iata" maxlength="3" list="aeroportos" value="GRU" required></label>
+        <label>Destino<input id="dest" class="iata" maxlength="3" list="aeroportos" value="LIS"></label>
+      </div>
+      <label class="check"><input type="checkbox" id="anywhere"> Qualquer destino (me mostre o mais barato)</label>
+      <div class="row">
+        <label>Mês da viagem<input type="month" id="mes"></label>
+        <label>Dias de viagem<input type="number" id="dias" min="1" max="60" value="10"></label>
+      </div>
+      <div class="row">
+        <label>Ida (opcional)<input type="date" id="ida"></label>
+        <label>Flexibilidade<select id="flex"><option value="0">Datas exatas</option><option value="1">± 1 dia</option><option value="3" selected>± 3 dias</option></select></label>
+      </div>
+      <div class="row">
+        <label>Passageiros<input type="number" id="pax" min="1" max="9" value="1"></label>
+        <label>Classe<select id="cabine"><option value="economy">Econômica</option><option value="premiumeconomy">Premium</option><option value="business">Executiva</option></select></label>
+      </div>
+      <button class="primary" type="submit">Gerar buscas</button>
+      <datalist id="aeroportos"></datalist>
+    </form>
+
+    <div class="results" id="resultados" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- PROMOÇÕES -->
+<section data-view="promocoes" hidden>
+  <div>
+    <h2 style="font-size:40px;text-transform:uppercase">Onde saem as promoções</h2>
+    <p class="lede">Promoção boa dura pouco. Estes são os criadores de conteúdo brasileiros que publicam ofertas, erros tarifários e bônus de milhas. Siga os canais de alerta de quem combina com você. O conteúdo é deles: abra o link para ler as ofertas e as regras completas.</p>
+  </div>
+  <div class="sources" id="fontes"></div>
+  <p class="note">Vários desses sites ganham comissão de afiliado quando você compra pelo link deles, sem mudar o preço para você. É assim que eles se sustentam.</p>
+</section>
+
+<!-- ROTAS -->
+<section data-view="rotas" hidden>
+  <div>
+    <h2 style="font-size:40px;text-transform:uppercase">Minhas rotas</h2>
+    <p class="lede">Anote as viagens que você quer fazer e o preço que você toparia pagar. Quando uma promoção aparecer nos canais, compare com o seu preço-alvo e decida rápido.</p>
+  </div>
+  <form class="watchform" id="f-rota">
+    <label>Origem<input id="r-orig" class="iata" maxlength="3" list="aeroportos" required></label>
+    <label>Destino<input id="r-dest" class="iata" maxlength="3" list="aeroportos" required></label>
+    <label>Preço-alvo (R$)<input id="r-preco" type="number" min="0" step="10" required></label>
+    <label class="full">Observação<input id="r-obs" placeholder="Ex.: férias de julho, ida e volta"></label>
+    <button type="submit" class="full">Adicionar</button>
+  </form>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>Rota</th><th>Preço-alvo</th><th>Referência</th><th>Observação</th><th>Ações</th></tr></thead>
+      <tbody id="lista-rotas"></tbody>
+    </table>
+  </div>
+  <p class="note" id="nota-rotas">As rotas ficam salvas só neste navegador. A coluna Referência é uma estimativa aproximada de preço promocional bom, para você ter uma régua; confirme sempre nos buscadores.</p>
+</section>
+
+<!-- DICAS -->
+<section data-view="dicas" hidden>
+  <div>
+    <h2 style="font-size:40px;text-transform:uppercase">Dicas dos especialistas</h2>
+    <p class="lede">O que os blogs de viagem e milhas repetem, resumido com nossas palavras. Cada dica tem o link de onde veio.</p>
+  </div>
+  <div class="guide" id="guia"></div>
+</section>
+
+</div></main>
+
+<footer><div class="wrap">Radar de Passagens não vende passagens nem copia o conteúdo dos sites citados. Ele monta links de busca e aponta para as fontes originais. Preços mudam a todo momento: confira tudo antes de comprar.</div></footer>
+
+<script>
+(function(){
+const AIRPORTS = {
+  GRU:["São Paulo (Guarulhos)","BR"],CGH:["São Paulo (Congonhas)","BR"],VCP:["Campinas (Viracopos)","BR"],GIG:["Rio de Janeiro (Galeão)","BR"],SDU:["Rio de Janeiro (Santos Dumont)","BR"],
+  BSB:["Brasília","BR"],CNF:["Belo Horizonte (Confins)","BR"],SSA:["Salvador","BR"],REC:["Recife","BR"],FOR:["Fortaleza","BR"],POA:["Porto Alegre","BR"],CWB:["Curitiba","BR"],
+  FLN:["Florianópolis","BR"],BEL:["Belém","BR"],MAO:["Manaus","BR"],NAT:["Natal","BR"],MCZ:["Maceió","BR"],JPA:["João Pessoa","BR"],GYN:["Goiânia","BR"],VIX:["Vitória","BR"],
+  CGB:["Cuiabá","BR"],AJU:["Aracaju","BR"],SLZ:["São Luís","BR"],THE:["Teresina","BR"],IGU:["Foz do Iguaçu","BR"],NVT:["Navegantes","BR"],PMW:["Palmas","BR"],CGR:["Campo Grande","BR"],
+  LIS:["Lisboa","INT"],OPO:["Porto","INT"],MAD:["Madri","INT"],BCN:["Barcelona","INT"],CDG:["Paris","INT"],FCO:["Roma","INT"],MXP:["Milão","INT"],LHR:["Londres","INT"],
+  AMS:["Amsterdã","INT"],FRA:["Frankfurt","INT"],MIA:["Miami","INT"],MCO:["Orlando","INT"],JFK:["Nova York","INT"],FLL:["Fort Lauderdale","INT"],EZE:["Buenos Aires (Ezeiza)","INT"],
+  AEP:["Buenos Aires (Aeroparque)","INT"],SCL:["Santiago","INT"],MVD:["Montevidéu","INT"],LIM:["Lima","INT"],BOG:["Bogotá","INT"],CUN:["Cancún","INT"],PTY:["Cidade do Panamá","INT"],
+  MEX:["Cidade do México","INT"],DXB:["Dubai","INT"],DOH:["Doha","INT"],NRT:["Tóquio","INT"]
+};
+// Faixas aproximadas de "preço promocional bom" ida e volta econômica por tipo de rota (régua, não cotação).
+function referencia(o,d){
+  const a=AIRPORTS[o],b=AIRPORTS[d]; if(!a||!b) return null;
+  if(a[1]==="BR"&&b[1]==="BR") return "até ~R$ 600";
+  const sulAm=["EZE","AEP","SCL","MVD","LIM","BOG"];
+  const intl = a[1]==="INT"?o:d;
+  if(sulAm.includes(intl)) return "até ~R$ 1.300";
+  if(["MIA","MCO","JFK","FLL","CUN","PTY","MEX"].includes(intl)) return "até ~R$ 2.800";
+  if(["DXB","DOH","NRT"].includes(intl)) return "até ~R$ 4.500";
+  return "até ~R$ 3.300";
+}
+
+const SOURCES = [
+  {name:"Melhores Destinos", url:"https://www.melhoresdestinos.com.br/",
+   what:"O maior portal de promoções de passagens do Brasil. Publica ofertas todos os dias (passagens, hotéis, pacotes e cupons), com preço, datas e regras conferidos no dia.",
+   tags:["Promoções diárias","Erro tarifário","Cupons"],
+   channels:[["App (Android e iOS)","https://www.melhoresdestinos.com.br/"],["Telegram","https://t.me/melhoresdestinos"],["WhatsApp","https://melhores.la/whatsapp-site"],["Newsletter diária","https://www.melhoresdestinos.com.br/"],["RSS","https://www.melhoresdestinos.com.br/feed"]],
+   extra:["Como funcionam as promoções","https://www.melhoresdestinos.com.br/entenda-como-funcionam-as-promocoes"]},
+  {name:"Passagens Imperdíveis", url:"https://www.passagensimperdiveis.com.br/",
+   what:"Site dedicado a garimpar passagens baratas e erros de tarifa, nacionais e internacionais.",
+   tags:["Promoções","Erro tarifário"],
+   channels:[["Site","https://www.passagensimperdiveis.com.br/"]]},
+  {name:"Pontos pra Voar", url:"https://pontospravoar.com/",
+   what:"Especialista em milhas. O Radar PPV resume todo dia as promoções de acúmulo, transferências bonificadas, compra de pontos com desconto e clubes, com a validade de cada uma.",
+   tags:["Milhas","Bônus de transferência","Resumo diário"],
+   channels:[["Telegram","https://t.me/canalpontospravoar"],["Site","https://pontospravoar.com/"]],
+   extra:["Exemplo de Radar PPV","https://pontospravoar.com/radar-ppv-resumo-promocoes-acumulo-transferencia-pontos-dia-26-janeiro-2026/"]},
+  {name:"Passageiro de Primeira", url:"https://passageirodeprimeira.com/",
+   what:"Guias completos sobre milhas, cartões e programas de fidelidade, além dos Alertas do PP com promoções de passagens, transferências e compra de pontos.",
+   tags:["Milhas","Cartões","Guias"],
+   channels:[["Site","https://passageirodeprimeira.com/"]],
+   extra:["Formas de acumular milhas","https://passageirodeprimeira.com/formas-acumular-milhas-pontos"]},
+  {name:"Cartões e Viagens", url:"https://cartoeseviagens.com.br/",
+   what:"Notícias rápidas sobre bônus de transferência e promoções de programas como LATAM Pass, Smiles e Azul Fidelidade.",
+   tags:["Milhas","Bônus de transferência"],
+   channels:[["Site","https://cartoeseviagens.com.br/"]]},
+  {name:"360meridianos", url:"https://www.360meridianos.com/",
+   what:"Blog de viagem com dicas de planejamento e de como comprar passagens mais baratas. Não publica alertas de promoção.",
+   tags:["Dicas","Planejamento"],
+   channels:[["Newsletter","https://www.360meridianos.com/"]],
+   extra:["Dicas para passagens baratas","https://www.360meridianos.com/dica/dicas-para-comprar-passagens-aereas-baratas-2"]}
+];
+
+const GUIDE = [
+  {t:"Flexibilize datas e destino", p:"A maior economia vem de ser flexível. Voar no meio da semana costuma sair mais barato que sexta e segunda. Se você só quer viajar, comece pelo destino mais barato em vez de escolher o destino primeiro.", s:[["Melhores Destinos","https://www.melhoresdestinos.com.br/entenda-como-funcionam-as-promocoes"],["360meridianos","https://www.360meridianos.com/dica/dicas-para-comprar-passagens-aereas-baratas-2"]]},
+  {t:"Feriado quase nunca tem promoção", p:"As companhias colocam poucas poltronas em promoção, e quase sempre nos voos que andam mais vazios. Datas de alta demanda, como feriados, raramente entram.", s:[["Melhores Destinos","https://www.melhoresdestinos.com.br/entenda-como-funcionam-as-promocoes"]]},
+  {t:"Promoção boa é para decidir rápido", p:"As tarifas baixas somem em horas. Se nada aparecer, uma régua comum é fechar cerca de 2 meses antes no internacional e 30 dias antes no nacional. Comprar com muita antecedência nem sempre é mais barato.", s:[["360meridianos","https://www.360meridianos.com/dica/dicas-para-comprar-passagens-aereas-baratas-2"]]},
+  {t:"Teste aeroportos vizinhos", p:"Pesquise o seu aeroporto e mais dois próximos, na origem e no destino. Aeroportos menores costumam ser mais baratos, mas some o custo de chegar até eles.", s:[["360meridianos","https://www.360meridianos.com/dica/dicas-para-comprar-passagens-aereas-baratas-2"],["Mala de Aventuras","https://www.maladeaventuras.com/passagens-aereas-baratas/"]]},
+  {t:"Esteja pronto para o erro tarifário", p:"Erros de preço duram minutos. Deixe dados do cartão e do passaporte à mão, entre nos canais de alerta e ative alertas de preço nos buscadores.", s:[["Mala de Aventuras","https://www.maladeaventuras.com/passagens-aereas-baratas/"]]},
+  {t:"Use milhas com estratégia", p:"Acumule com o cartão de crédito, aproveite bônus de adesão a clubes e, principalmente, transfira pontos só quando houver bônus de transferência. Tenha uma meta de viagem: pontos parados perdem valor e podem vencer.", s:[["Passageiro de Primeira","https://passageirodeprimeira.com/formas-acumular-milhas-pontos"],["Pontos pra Voar","https://pontospravoar.com/radar-ppv-resumo-promocoes-acumulo-transferencia-pontos-dia-26-janeiro-2026/"]]},
+  {t:"Compare e leia o regulamento", p:"Antes de comprar pontos ou passagens, compare com o site da companhia e com concorrentes, leia as regras (bagagem, remarcação, reembolso) e tire print das etapas da compra.", s:[["Pontos pra Voar","https://pontospravoar.com/radar-ppv-resumo-promocoes-acumulo-transferencia-pontos-dia-26-janeiro-2026/"],["Melhores Destinos","https://www.melhoresdestinos.com.br/entenda-como-funcionam-as-promocoes"]]},
+  {t:"Olhe pacotes, cupons e cashback", p:"Às vezes o pacote com hotel sai mais barato que a passagem sozinha. Cupons e cashback também reduzem o preço final.", s:[["360meridianos","https://www.360meridianos.com/dica/dicas-para-comprar-passagens-aereas-baratas-2"]]}
+];
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const fmt=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+
+// datalist
+$("#aeroportos").innerHTML=Object.entries(AIRPORTS).map(([k,v])=>`<option value="${k}">${esc(v[0])}</option>`).join("");
+
+// default month = next month
+const now=new Date(); const nm=new Date(now.getFullYear(),now.getMonth()+2,1);
+$("#mes").value=nm.getFullYear()+"-"+pad(nm.getMonth()+1);
+
+function buildLinks(q){
+  const o=q.orig, d=q.anywhere?"":q.dest;
+  const [yy,mm]=q.mes.split("-");
+  const out=[];
+  // Google Flights (consulta em linguagem natural)
+  const mesNome=new Date(+yy,+mm-1,1).toLocaleString("en",{month:"long"});
+  const gq = d ? `Flights from ${o} to ${d} in ${mesNome} ${yy} for ${q.dias} days` : `Flights from ${o} to anywhere`;
+  out.push({b:"Google Flights", s:d?"Gráfico de preços do mês e alerta por e-mail":"Explorar: mapa com destinos baratos", h:"https://www.google.com/travel/flights?hl=pt-BR&curr=BRL&q="+encodeURIComponent(gq)});
+  if(!d) out.push({b:"Google Flights Explorar", s:"Mapa de preços saindo de "+o, h:"https://www.google.com/travel/explore?hl=pt-BR&curr=BRL"});
+  // Skyscanner mês inteiro
+  const oym=yy.slice(2)+mm;
+  const cab=q.cabine;
+  const sky = "https://www.skyscanner.com.br/transporte/passagens-aereas/"+o.toLowerCase()+"/"+(d?d.toLowerCase():"anywhere")+"/?adultsv2="+q.pax+"&cabinclass="+cab+"&oym="+oym+(d?"&iym="+oym:"")+"&rtn=1";
+  out.push({b:"Skyscanner", s:d?"Calendário do mês inteiro com o menor preço por dia":"Qualquer lugar: lista de destinos do mais barato", h:sky});
+  // Kayak com flexibilidade
+  if(d){
+    let ida;
+    if(q.ida){ ida=new Date(q.ida+"T12:00:00"); } else { ida=new Date(+yy,+mm-1,10,12); }
+    const volta=new Date(ida); volta.setDate(volta.getDate()+ +q.dias);
+    const f=+q.flex; const fx=f?`-flexible-${f}day${f>1?"s":""}`:"";
+    const kc={economy:"",premiumeconomy:"/premium",business:"/business"}[cab];
+    out.push({b:"Kayak", s:`Ida ${ida.toLocaleDateString("pt-BR")}${f?" ± "+f+" dia(s)":""}, ordenado por preço`, h:`https://www.kayak.com.br/flights/${o}-${d}/${fmt(ida)}${fx}/${fmt(volta)}${fx}${kc}/${q.pax}adults?sort=price_a`});
+  } else {
+    out.push({b:"Kayak Explore", s:"Destinos baratos no mapa", h:"https://www.kayak.com.br/explore/"+o});
+  }
+  // Milhas
+  out.push({b:"Smiles (GOL)", s:"Compare o preço em milhas", h:"https://www.smiles.com.br/"});
+  out.push({b:"LATAM Pass", s:"Compare o preço em pontos", h:"https://latampass.latam.com/pt_br/"});
+  out.push({b:"Azul Fidelidade", s:"Compare o preço em pontos", h:"https://www.voeazul.com.br/br/pt/programa-fidelidade"});
+  return out;
+}
+
+function tipsFor(q){
+  const t=[];
+  const isBR = c=>AIRPORTS[c]&&AIRPORTS[c][1]==="BR";
+  const dom = !q.anywhere && isBR(q.orig) && isBR(q.dest);
+  const [yy,mm]=q.mes.split("-");
+  const alvo=new Date(+yy,+mm-1,1); const dias=Math.round((alvo-new Date())/864e5);
+  if(q.ida){
+    const wd=new Date(q.ida+"T12:00:00").getDay();
+    if(wd===5||wd===1||wd===0) t.push(["warn","Data cara","Sexta, domingo e segunda costumam ser os dias mais caros. Teste ida na terça ou quarta."]);
+    else t.push(["ok","Boa data","Ida no meio da semana costuma ter preço melhor."]);
+  }
+  if(+q.flex===0) t.push(["info","Flexibilize","Com ± 3 dias de flexibilidade o buscador mostra opções que você não veria com datas exatas."]);
+  const ideal = dom?30:60;
+  if(dias<ideal) t.push(["warn","Pouca antecedência",`Faltam cerca de ${Math.max(dias,0)} dias. Para ${dom?"voos nacionais":"voos internacionais"} a régua comum é fechar uns ${ideal} dias antes, então não espere muito.`]);
+  else t.push(["ok","Dá tempo",`Você tem uns ${dias} dias. Ative o alerta de preço no Google Flights e acompanhe os canais de promoção antes de fechar.`]);
+  if([12,1,7].includes(+mm)) t.push(["warn","Alta temporada","Dezembro, janeiro e julho são férias escolares no Brasil. Promoções são raras nesses meses."]);
+  if(q.anywhere) t.push(["ok","Destino aberto","Deixar o destino em aberto é a forma mais eficiente de achar passagem barata."]);
+  else t.push(["info","Aeroportos vizinhos","Repita a busca com aeroportos próximos"+(q.orig==="GRU"?" (CGH, VCP)":q.orig==="GIG"?" (SDU)":"")+". Às vezes a diferença paga o deslocamento."]);
+  t.push(["info","Milhas","Antes de pagar em dinheiro, veja o preço em milhas. Se precisar de pontos, espere um bônus de transferência (veja Pontos pra Voar)."]);
+  return t;
+}
+
+function render(q){
+  const links=buildLinks(q), tips=tipsFor(q);
+  const dn = q.anywhere?"???":q.dest;
+  const name = c=>AIRPORTS[c]?AIRPORTS[c][0]:"";
+  $("#resultados").innerHTML = `
+    <div class="route"><span class="code">${esc(q.orig)}</span><span class="arrow">→</span><span class="code">${esc(dn)}</span>
+      <span class="note">${esc(name(q.orig))}${q.anywhere?" para qualquer lugar":name(q.dest)?" para "+esc(name(q.dest)):""} · ${q.dias} dias · ${q.pax} passageiro(s)</span></div>
+    <div class="eyebrow">Abrir a busca pronta em</div>
+    <div class="links">${links.map(l=>`<a href="${esc(l.h)}" target="_blank" rel="noopener"><b>${esc(l.b)} ↗</b><small>${esc(l.s)}</small></a>`).join("")}</div>
+    <div class="eyebrow">Dicas para esta busca</div>
+    <ul class="tips">${tips.map(([k,a,b])=>`<li><span class="pill ${k}">${esc(a)}</span><span>${esc(b)}</span></li>`).join("")}</ul>`;
+}
+
+function readQ(){
+  return {orig:$("#orig").value.trim().toUpperCase()||"GRU", dest:$("#dest").value.trim().toUpperCase(), anywhere:$("#anywhere").checked||!$("#dest").value.trim(),
+    mes:$("#mes").value||$("#mes").defaultValue, dias:Math.max(1,+$("#dias").value||7), ida:$("#ida").value, flex:$("#flex").value, pax:Math.max(1,+$("#pax").value||1), cabine:$("#cabine").value};
+}
+$("#f-busca").addEventListener("submit",e=>{e.preventDefault();render(readQ());});
+$("#anywhere").addEventListener("change",e=>{$("#dest").disabled=e.target.checked;});
+render(readQ());
+
+// Fontes
+$("#fontes").innerHTML=SOURCES.map(s=>`<article class="src">
+  <h3>${esc(s.name)}</h3><p>${esc(s.what)}</p>
+  <div class="chips">${s.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>
+  <div class="eyebrow">Receber alertas</div>
+  <div class="chips">${s.channels.map(([n,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)} ↗</a>`).join("")}</div>
+  ${s.extra?`<a href="${esc(s.extra[1])}" target="_blank" rel="noopener">${esc(s.extra[0])} ↗</a>`:""}
+</article>`).join("");
+
+// Guia
+$("#guia").innerHTML=GUIDE.map(g=>`<article><h3>${esc(g.t)}</h3><p>${esc(g.p)}</p>
+  <div class="src-line">Fonte: ${g.s.map(([n,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}</a>`).join(", ")}</div></article>`).join("");
+
+// Rotas (salvas no navegador)
+const KEY="radar-passagens-rotas";
+const EXEMPLOS=[{o:"GRU",d:"LIS",p:3000,obs:"Exemplo: Portugal nas férias",ex:true},{o:"CNF",d:"SSA",p:500,obs:"Exemplo: feriado no Nordeste",ex:true}];
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY));return Array.isArray(v)?v:null}catch(e){return null}}
+function save(v){try{localStorage.setItem(KEY,JSON.stringify(v))}catch(e){}}
+let rotas=load()||EXEMPLOS.slice();
+function renderRotas(){
+  $("#lista-rotas").innerHTML = rotas.length? rotas.map((r,i)=>`<tr>
+    <td class="num">${esc(r.o)} → ${esc(r.d)}</td>
+    <td class="num">R$ ${Number(r.p).toLocaleString("pt-BR")}</td>
+    <td>${esc(referencia(r.o,r.d)||"—")}</td>
+    <td>${esc(r.obs||"")}${r.ex?' <span class="pill info">exemplo</span>':""}</td>
+    <td style="white-space:nowrap"><button type="button" data-go="${i}">Buscar</button> <button type="button" data-del="${i}" aria-label="Remover ${esc(r.o)} para ${esc(r.d)}">Remover</button></td></tr>`).join("")
+  : `<tr><td colspan="5" class="note">Nenhuma rota ainda. Adicione a primeira no formulário acima.</td></tr>`;
+}
+$("#f-rota").addEventListener("submit",e=>{e.preventDefault();
+  rotas=rotas.filter(r=>!r.ex);
+  rotas.push({o:$("#r-orig").value.trim().toUpperCase(),d:$("#r-dest").value.trim().toUpperCase(),p:+$("#r-preco").value,obs:$("#r-obs").value.trim()});
+  save(rotas);renderRotas();renderFeed();e.target.reset();});
+$("#lista-rotas").addEventListener("click",e=>{
+  const del=e.target.dataset.del, go=e.target.dataset.go;
+  if(del!==undefined){rotas.splice(+del,1);save(rotas);renderRotas();renderFeed();}
+  if(go!==undefined){const r=rotas[+go];$("#orig").value=r.o;$("#dest").value=r.d;$("#anywhere").checked=false;$("#dest").disabled=false;location.hash="busca";render(readQ());}
+});
+renderRotas();
+
+// Promoções de hoje (promocoes.json gerado pela rotina do GitHub)
+const NOMES={}; Object.entries(AIRPORTS).forEach(([k,v])=>{NOMES[k]=v[0].replace(/\s*\(.*\)/,"").toLowerCase();});
+let feedItens=[], filtro="todas";
+function bateRota(it){
+  const t=it.titulo.toLowerCase();
+  return rotas.filter(r=>!r.ex).some(r=>{const n=NOMES[r.d]; if(!n||!t.includes(n)) return false; return it.preco==null||it.preco<=r.p;});
+}
+function quando(iso){ if(!iso) return ""; const d=new Date(iso); const h=Math.round((Date.now()-d)/36e5);
+  return h<1?"agora há pouco":h<24?`há ${h} h`:d.toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}); }
+function renderFeed(){
+  const lista=feedItens.filter(it=>filtro==="todas"?true:filtro==="rotas"?bateRota(it):it.tipos.includes(filtro));
+  $("#feed").innerHTML=lista.slice(0,80).map(it=>{const m=bateRota(it);return `<li class="${m?"match":""}">
+    <a class="t" href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.titulo)} ↗</a>
+    <div class="meta"><span>por <a href="${esc(it.site_url)}" target="_blank" rel="noopener">${esc(it.site)}</a></span><span>${esc(quando(it.data))}</span>
+    ${m?'<span class="pill ok">bate com sua rota</span>':""}${it.tipos.includes("erro")?'<span class="pill warn">erro tarifário?</span>':""}</div></li>`}).join("")
+    || `<li class="note">Nenhuma oferta com esse filtro agora.${filtro==="rotas"?" Cadastre destinos em Minhas rotas.":""}</li>`;
+}
+$("#filtros").addEventListener("click",e=>{const f=e.target.dataset.f; if(!f) return; filtro=f;
+  document.querySelectorAll("#filtros button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.f===f))); renderFeed();});
+fetch("promocoes.json",{cache:"no-store"}).then(r=>{if(!r.ok) throw new Error(r.status); return r.json();}).then(d=>{
+  feedItens=d.itens||[];
+  const fora=(d.fontes||[]).filter(f=>!f.ok).map(f=>f.site);
+  $("#feed-status").textContent=`Atualizado ${quando(d.atualizado_em)} · ${feedItens.length} ofertas de ${(d.fontes||[]).length} sites`+(fora.length?` · sem resposta agora: ${fora.join(", ")}`:"");
+  renderFeed();
+}).catch(()=>{ $("#feed-status").innerHTML='Ainda não há promoções carregadas. Enquanto isso, siga os canais em <a href="#promocoes">Onde saem as promoções</a>.'; });
+
+// Abas
+const views=["hoje","busca","promocoes","rotas","dicas"];
+function show(){const h=location.hash.slice(1);const v=views.includes(h)?h:"hoje";
+  document.querySelectorAll("[data-view]").forEach(s=>s.hidden=s.dataset.view!==v);
+  document.querySelectorAll("[data-tab]").forEach(a=>a.toggleAttribute("aria-current",false)||a.dataset.tab===v&&a.setAttribute("aria-current","page"));}
+window.addEventListener("hashchange",show);show();
+})();
+</script>
+</body>
+</html>
